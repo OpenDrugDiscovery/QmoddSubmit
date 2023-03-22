@@ -1,0 +1,33 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "qmodd_submit"
+description = "ODD quantum data computation workflow"
+version = "0.0.1"
+authors = [{ name = "ODD", email = "info@odd.com" }]
+readme = "README.md"
+requires-python = ">=3.8"
+
+[project.scripts]
+qmodd_submit = "qmodd_submit.cli:app"
+
+[tool.black]
+line-length = 110
+target-version = ['py38', 'py39']
+include = '\.pyi?$'
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["qmodd_submit", "qmodd_submit.*"]
+exclude = []
+namespaces = false
+
+[tool.pytest.ini_options]
+minversion = "6.0"
+addopts = "-vv --cov=qmodd --cov-report=term --cov-report=xml"
+testpaths = ["tests"]
+
+[tool.coverage.run]
+omit = ["tests/*", "qmodd_submit/cli.py"]
