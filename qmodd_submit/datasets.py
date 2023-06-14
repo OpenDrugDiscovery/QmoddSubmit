@@ -1,11 +1,14 @@
 import os
 import sys
+import time
 import json
 import h5py
 import tqdm
 import typer
 import fsspec
 import logging
+import datetime
+import subprocess
 import numpy as np
 import pandas as pd
 import datamol as dm
@@ -50,19 +53,32 @@ def parse_server_info(server_info_file=None):
         password=password
     )
 
+class CollectionEncoder(json.JSONEncoder):
+    def default(self, obj):
+        if isinstance(obj, set):
+            return list(obj)
+        if isinstance(obj, np.ndarray):
+            return obj.tolist()
+        if isinstance(obj, (datetime.date, datetime.datetime)):
+            return str(obj)
+        return json.JSONEncoder.default(self, obj)
+
 
 def check_computation_status(server_info_file=None):
     server_info = parse_server_info(server_info_file)
     client = interface.FractalClient(**server_info)
 
-    res = client.get_collection("OptimizationDataset", "qmodd_semiempirical_optimization_geometry_dataset")
+    # res = client.get_collection("OptimizationDataset", 
+    #                             "qmodd_semiempirical_optimization_geometry_dataset")
+    # print(res.)
+    completed = client.query_procedures()
+    results = list(map(lambda x: x.dict(), completed))
+    with open("qmodd_semi_geo_dataset.json", "w") as f:
+        json.dump(results, f, indent=2, sort_keys=True, cls=CollectionEncoder)
     # print(res)
     # print(res.)
 
-    df = client.query_results(status=None, full_return=True)
     # client.
-    print(df[0])
-    return df
 
 
 class BaseQCDataset:
@@ -76,6 +92,9 @@ class BaseQCDataset:
 
         if loguru_level != "DEBUG":
             dm.disable_rdkit_log()
+
+        res = subprocess.run(["git", "config", "user.name"], stdout=subprocess.PIPE)
+        self._git_username = res.stdout.strip().decode()
 
         self._parse_server_info(server_info_file)
         self.connect_to_server()
@@ -128,13 +147,12 @@ class ConformersDataset(BaseQCDataset):
 
     def _generate_conformers_(self):
         """
-        This script reads a file of molecules, generates a number of diverse, low energy conformations for each one
-        using simulations and writes the results to a HDF5 file.
+        Reads a file of molecules, generates a number of diverse, low energy conformations for each one
+        using MD simulations.
         
         Sources:
             -
         """
-
         n_successful = 0
         
         self.mol_with_conformers = []
@@ -149,7 +167,7 @@ class ConformersDataset(BaseQCDataset):
 
     def submit(self):
         """
-        A dataset factory preprocesses a set of SMILES and contains meta-data about the dataset.
+        Create a dataset and submit to the server
         This does not yet run any QM computations. It just preprocesses the molecular structures (e.g. deduplication).
         """  
 
@@ -171,7 +189,7 @@ class ConformersDataset(BaseQCDataset):
             verbose=True,
         )
 
-        self._dataset.metadata.submitter = "qmodd" #TODO: identify the user
+        self._dataset.metadata.submitter = self._git_username
         
         responses = self._dataset.submit(self.computation_server, verbose=True)
         logger.info(f"Submitted {len(responses)} tasks to {self.server_info['address']}")

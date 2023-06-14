@@ -87,7 +87,7 @@ def generate_conformers(
     )
     all_conformers = dm.utils.parallelized(
         fn,
-        # NOTE (Cas): Conversion is needed for now as openff and openmm are in the
+        # NOTE: Conversion is needed for now as openff and openmm are in the
         #  middle of a refactoring to a unified system.
         [m for m in mol.conformers],
         progress=True,
@@ -258,7 +258,8 @@ def simulate_low_energy_conformers(
     integrator = openmm.LangevinMiddleIntegrator(temperature, friction_coeff, step_size)
 
     # Setup the simulation
-    simulation = app.Simulation(topology, system, integrator, openmm.Platform.getPlatformByName("Reference"))
+    simulation = app.Simulation(topology, system, integrator, 
+                                openmm.Platform.getPlatformByName("Reference"))
 
     if isinstance(starting_conformation, State):
         simulation.context.setState(starting_conformation)

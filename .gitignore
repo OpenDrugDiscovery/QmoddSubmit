@@ -141,3 +141,4 @@ nohup.out
 *.crt 
 *.key
 *.dat
+*.xyz
